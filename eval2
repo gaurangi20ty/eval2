@@ -1,0 +1,70 @@
+
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+from pymongo import MongoClient
+    
+url='https://www.ttfi.org/events/ranking/MjAyNA==/NDk='
+    
+response=requests.get(url)
+
+soup=BeautifulSoup(response.content,'html.parser')
+print(soup)
+
+table=soup.find('table')
+header= [header.text.strip() for header in table.find_all('th')]
+data=[]
+for row in table.find_all('tr')[1:]:
+    col=table.find_all('td')
+ttfi_id=col[0].text.strip()
+name=col[1].text.strip()
+state=col[2].text.strip()
+dob=col[3].text.strip()
+national_ranking=col[4].text.strip()
+
+data.append({
+    'ttfi':ttfi_id,
+    'name':name,
+    'state':state,
+    'dob':dob,
+    'National Ranking':national_ranking,
+   
+})
+
+
+
+
+
+
+
+
+
+
+
+df=pd.DataFrame(data)
+
+df['National Ranking'] = pd.to_numeric(df['National Ranking'])
+players_rank_19_25 = df[(df['National Ranking'] >= 19) & (df['National Ranking'] <= 25)]
+number_of_players = len(players_rank_19_25)
+print(f"Number of players from rank 19 to 25: {number_of_players}")
+
+df['DOB'] = pd.to_datetime(df['DOB']) 
+players_born_after_2010 = df[df['DOB'].dt.year > 2010]
+print(players_born_after_2010[['Name', 'DOB']])
+
+client = MongoClient('mongodb://127.0.0.1:27017')
+db = client['players_db']
+collection = db['players']
+collection.insert_many(data)
+
+up_players=collection.find({'state':'UP'})
+up_list=list(up_players)
+
+print("list of players from UP")
+print(up_list)
+
+position_1_players = collection.find({'National Ranking': 10})
+position_1_players_list = list(position_1_players)
+
+
+    
